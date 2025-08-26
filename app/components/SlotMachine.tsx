@@ -2,25 +2,73 @@
 
 import React, { useState, useEffect, useRef } from 'react'
 import { motion } from 'framer-motion'
+import Image from 'next/image'
 
-// Símbolos del tragaperras
-const symbols = ['🍒', '🍋', '🍊', '🍎', '🍇', '💎', '⭐', '🔔']
-
-interface ReelProps {
-  symbols: string[]
-  isSpinning: boolean
-  finalSymbol: string
-  delay: number
+// Tipos de símbolos
+interface SymbolData {
+  id: string
+  type: 'emoji' | 'image'
+  content: string
+  value?: number // Valor para premios
 }
 
-const Reel: React.FC<ReelProps> = ({ symbols, isSpinning, finalSymbol, delay }) => {
-  const [reelSymbols, setReelSymbols] = useState<string[]>([])
+// Símbolos del tragaperras
+const symbols: SymbolData[] = [
+  { id: 'cherry', type: 'emoji', content: '🍒', value: 100 },
+  { id: 'lemon', type: 'emoji', content: '🍋', value: 100 },
+  { id: 'orange', type: 'emoji', content: '🍊', value: 100 },
+  { id: 'apple', type: 'emoji', content: '🍎', value: 100 },
+  { id: 'grape', type: 'emoji', content: '🍇', value: 100 },
+  { id: 'diamond', type: 'emoji', content: '💎', value: 500 },
+  { id: 'star', type: 'emoji', content: '⭐', value: 300 },
+  { id: 'bell', type: 'emoji', content: '🔔', value: 200 },
+  { id: 'd3', type: 'image', content: '/logoD3.png', value: 1000 }
+]
+
+// Componente para renderizar símbolos
+const Symbol: React.FC<{ symbol: SymbolData; size?: number }> = ({ symbol, size = 60 }) => {
+  if (symbol.type === 'emoji') {
+    return (
+      <span style={{ fontSize: `${size}px`, lineHeight: 1, display: 'block' }}>
+        {symbol.content}
+      </span>
+    )
+  } else {
+    return (
+      <Image
+        src={symbol.content}
+        alt={symbol.id}
+        width={size}
+        height={size}
+        style={{ 
+          display: 'block', 
+          margin: '0 auto',
+          borderRadius: '50%',
+          objectFit: 'cover',
+          border: '2px solid #2E5233',
+          boxShadow: '0 2px 8px rgba(46, 82, 51, 0.3)'
+        }}
+      />
+    )
+  }
+}
+
+interface ReelProps {
+  symbols: SymbolData[]
+  isSpinning: boolean
+  finalSymbol: SymbolData
+  delay: number
+  screenHeight: number
+}
+
+const Reel: React.FC<ReelProps> = ({ symbols, isSpinning, finalSymbol, delay, screenHeight }) => {
+  const [reelSymbols, setReelSymbols] = useState<SymbolData[]>([])
   const [animationKey, setAnimationKey] = useState(0)
 
   useEffect(() => {
     // Crear una lista extendida de símbolos para la animación continua
     const generateReelSymbols = () => {
-      const extendedSymbols = []
+      const extendedSymbols: SymbolData[] = []
       
       // Agregar símbolos aleatorios para el giro
       for (let i = 0; i < 15; i++) {
@@ -50,7 +98,7 @@ const Reel: React.FC<ReelProps> = ({ symbols, isSpinning, finalSymbol, delay }) 
     }
   }, [finalSymbol, symbols, reelSymbols.length])
 
-  const symbolHeight = 100 // altura de cada símbolo en px
+  const symbolHeight = screenHeight > 1000 ? 180 : screenHeight > 800 ? 160 : 100 // altura de cada símbolo en px
   const visibleSymbols = 3 // número de símbolos visibles
   const spinDuration = 2 + delay / 1000 // duración del giro
   
@@ -83,7 +131,10 @@ const Reel: React.FC<ReelProps> = ({ symbols, isSpinning, finalSymbol, delay }) 
               className="symbol"
               style={{ 
                 height: `${symbolHeight}px`,
-                filter: isSpinning && index < reelSymbols.length - 3 ? 'blur(2px)' : 'none'
+                filter: isSpinning && index < reelSymbols.length - 3 ? 'blur(2px)' : 'none',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
               }}
               animate={{
                 filter: isSpinning && index < reelSymbols.length - 3 
@@ -96,7 +147,10 @@ const Reel: React.FC<ReelProps> = ({ symbols, isSpinning, finalSymbol, delay }) 
                 repeatType: "reverse"
               }}
             >
-              {symbol}
+              <Symbol 
+                symbol={symbol} 
+                size={screenHeight > 1000 ? 120 : screenHeight > 800 ? 100 : 60} 
+              />
             </motion.div>
           ))}
         </motion.div>
@@ -107,10 +161,23 @@ const Reel: React.FC<ReelProps> = ({ symbols, isSpinning, finalSymbol, delay }) 
 
 const SlotMachine: React.FC = () => {
   const [isSpinning, setIsSpinning] = useState(false)
-  const [reels, setReels] = useState<string[]>(['🍒', '🍒', '🍒'])
+  const [reels, setReels] = useState<SymbolData[]>([symbols[0], symbols[0], symbols[0]]) // Cerezas por defecto
   const [credits, setCredits] = useState(100)
   const [result, setResult] = useState('')
   const [isWin, setIsWin] = useState(false)
+  const [screenHeight, setScreenHeight] = useState(0)
+
+  // Hook para detectar el tamaño de pantalla
+  useEffect(() => {
+    const updateScreenHeight = () => {
+      setScreenHeight(window.innerHeight)
+    }
+    
+    updateScreenHeight()
+    window.addEventListener('resize', updateScreenHeight)
+    
+    return () => window.removeEventListener('resize', updateScreenHeight)
+  }, [])
 
   const spin = () => {
     if (isSpinning || credits <= 0) return
@@ -120,7 +187,7 @@ const SlotMachine: React.FC = () => {
     setCredits(prev => prev - 10) // Cuesta 10 créditos por giro
 
     // Generar resultados aleatorios para cada carrete
-    const newReels = [
+    const newReels: SymbolData[] = [
       symbols[Math.floor(Math.random() * symbols.length)],
       symbols[Math.floor(Math.random() * symbols.length)],
       symbols[Math.floor(Math.random() * symbols.length)]
@@ -134,29 +201,16 @@ const SlotMachine: React.FC = () => {
     }, 4000) // Duración total del giro aumentada
   }
 
-  const checkWin = (currentReels: string[]) => {
+  const checkWin = (currentReels: SymbolData[]) => {
     const [reel1, reel2, reel3] = currentReels
 
-    if (reel1 === reel2 && reel2 === reel3) {
+    if (reel1.id === reel2.id && reel2.id === reel3.id) {
       // Tres iguales - gran premio
-      let winAmount = 0
-      switch (reel1) {
-        case '💎':
-          winAmount = 500
-          break
-        case '⭐':
-          winAmount = 300
-          break
-        case '🔔':
-          winAmount = 200
-          break
-        default:
-          winAmount = 100
-      }
+      const winAmount = reel1.value || 100
       setCredits(prev => prev + winAmount)
       setResult(`¡JACKPOT! +${winAmount} créditos`)
       setIsWin(true)
-    } else if (reel1 === reel2 || reel2 === reel3 || reel1 === reel3) {
+    } else if (reel1.id === reel2.id || reel2.id === reel3.id || reel1.id === reel3.id) {
       // Dos iguales - premio menor
       const winAmount = 30
       setCredits(prev => prev + winAmount)
@@ -171,7 +225,7 @@ const SlotMachine: React.FC = () => {
   const resetGame = () => {
     setCredits(100)
     setResult('')
-    setReels(['🍒', '🍒', '🍒'])
+    setReels([symbols[0], symbols[0], symbols[0]]) // Cerezas por defecto
     setIsWin(false)
   }
 
@@ -183,7 +237,7 @@ const SlotMachine: React.FC = () => {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 1 }}
       >
-        🎰 TRAGAPERRAS 🎰
+         SLOT MACHINE D3 
       </motion.h1>
 
       <div className="credits">
@@ -201,18 +255,21 @@ const SlotMachine: React.FC = () => {
           isSpinning={isSpinning}
           finalSymbol={reels[0]}
           delay={0}
+          screenHeight={screenHeight}
         />
         <Reel
           symbols={symbols}
           isSpinning={isSpinning}
           finalSymbol={reels[1]}
           delay={800}
+          screenHeight={screenHeight}
         />
         <Reel
           symbols={symbols}
           isSpinning={isSpinning}
           finalSymbol={reels[2]}
           delay={1600}
+          screenHeight={screenHeight}
         />
       </motion.div>
 
@@ -265,7 +322,16 @@ const SlotMachine: React.FC = () => {
         fontSize: '0.9rem',
         color: '#bbb'
       }}>
-        <p>💎 = 500 pts | ⭐ = 300 pts | 🔔 = 200 pts | Otros = 100 pts</p>
+        <p>
+          <span style={{ display: 'inline-flex', alignItems: 'center', margin: '0 5px' }}>
+            <Symbol 
+              symbol={symbols.find(s => s.id === 'd3')!} 
+              size={screenHeight > 1000 ? 35 : screenHeight > 800 ? 30 : 20} 
+            />
+            <span style={{ marginLeft: '5px' }}>= 1000 pts</span>
+          </span>
+          | 💎 = 500 pts | ⭐ = 300 pts | 🔔 = 200 pts | Otros = 100 pts
+        </p>
         <p>Dos iguales = 30 pts | Costo por giro = 10 pts</p>
       </div>
     </div>
