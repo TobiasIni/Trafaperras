@@ -134,14 +134,16 @@ button {
 
 .symbol {
   font-size: clamp(4rem, 8vw, 7rem);
-  height: clamp(140px, 13.33vh, 200px);
   display: flex;
   align-items: center;
   justify-content: center;
   width: 100%;
   text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.7);
   flex-shrink: 0;
+  flex-grow: 0;
   transition: filter 0.1s ease;
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
 .spin-button {
@@ -310,7 +312,6 @@ button {
   
   .symbol {
     font-size: clamp(5rem, 10vw, 8rem);
-    height: clamp(160px, 15vh, 233px);
   }
   
   .spin-button {
@@ -356,7 +357,6 @@ button {
   
   .symbol {
     font-size: clamp(6rem, 12vw, 9rem);
-    height: clamp(180px, 16.67vh, 267px);
   }
 }
 

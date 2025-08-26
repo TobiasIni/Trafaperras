@@ -64,23 +64,30 @@ interface ReelProps {
 const Reel: React.FC<ReelProps> = ({ symbols, isSpinning, finalSymbol, delay, screenHeight }) => {
   const [reelSymbols, setReelSymbols] = useState<SymbolData[]>([])
   const [animationKey, setAnimationKey] = useState(0)
+  
+  // Configuración de dimensiones
+  const symbolHeight = screenHeight > 1000 ? 180 : screenHeight > 800 ? 160 : 100 // altura de cada símbolo en px
+  const visibleSymbols = 3 // número de símbolos visibles
+  const reelHeight = symbolHeight * visibleSymbols // altura total del carrete
+  const spinDuration = 2 + delay / 1000 // duración del giro
 
   useEffect(() => {
     // Crear una lista extendida de símbolos para la animación continua
     const generateReelSymbols = () => {
       const extendedSymbols: SymbolData[] = []
       
-      // Agregar símbolos aleatorios para el giro
-      for (let i = 0; i < 15; i++) {
+      // Agregar símbolos aleatorios para el giro (más símbolos para animación más suave)
+      for (let i = 0; i < 20; i++) {
         extendedSymbols.push(symbols[Math.floor(Math.random() * symbols.length)])
       }
       
-      // Agregar el símbolo final al final para que termine ahí
+      // Agregar el símbolo final en la posición correcta
       extendedSymbols.push(finalSymbol)
       
-      // Agregar símbolos adicionales visibles
-      extendedSymbols.push(symbols[Math.floor(Math.random() * symbols.length)])
-      extendedSymbols.push(symbols[Math.floor(Math.random() * symbols.length)])
+      // Agregar exactamente los símbolos necesarios para llenar la ventana visible
+      for (let i = 0; i < visibleSymbols - 1; i++) {
+        extendedSymbols.push(symbols[Math.floor(Math.random() * symbols.length)])
+      }
       
       return extendedSymbols
     }
@@ -94,16 +101,16 @@ const Reel: React.FC<ReelProps> = ({ symbols, isSpinning, finalSymbol, delay, sc
   // Inicializar con símbolos por defecto
   useEffect(() => {
     if (reelSymbols.length === 0) {
-      setReelSymbols([finalSymbol, symbols[0], symbols[1]])
+      const initialSymbols = []
+      for (let i = 0; i < visibleSymbols; i++) {
+        initialSymbols.push(i === 0 ? finalSymbol : symbols[i % symbols.length])
+      }
+      setReelSymbols(initialSymbols)
     }
-  }, [finalSymbol, symbols, reelSymbols.length])
-
-  const symbolHeight = screenHeight > 1000 ? 180 : screenHeight > 800 ? 160 : 100 // altura de cada símbolo en px
-  const visibleSymbols = 3 // número de símbolos visibles
-  const spinDuration = 2 + delay / 1000 // duración del giro
+  }, [finalSymbol, symbols, reelSymbols.length, visibleSymbols])
   
   return (
-    <div className="reel">
+    <div className="reel" style={{ height: `${reelHeight}px` }}>
       <div className="reel-window">
         <motion.div
           key={animationKey}
@@ -131,10 +138,15 @@ const Reel: React.FC<ReelProps> = ({ symbols, isSpinning, finalSymbol, delay, sc
               className="symbol"
               style={{ 
                 height: `${symbolHeight}px`,
+                minHeight: `${symbolHeight}px`,
+                maxHeight: `${symbolHeight}px`,
                 filter: isSpinning && index < reelSymbols.length - 3 ? 'blur(2px)' : 'none',
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'center'
+                justifyContent: 'center',
+                overflow: 'hidden',
+                flexShrink: 0,
+                flexGrow: 0
               }}
               animate={{
                 filter: isSpinning && index < reelSymbols.length - 3 
